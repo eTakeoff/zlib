@@ -5,6 +5,16 @@ project(zlib C)
 
 set(VERSION "1.2.11")
 
+set(BUILD_SHARED_LIBS 0)
+
+set(INSTALL_SOURCE_TARGETS zlibstatic)
+# if(BUILD_SHARED_LIBS)
+	# set(INSTALL_SOURCE_TARGETS "zlib","zlibstatic")
+# else
+	# set(INSTALL_SOURCE_TARGETS "zlibstatic")
+# )
+# endif(BUILD_SHARED_LIBS)
+
 option(ASM686 "Enable building i686 assembly implementation")
 option(AMD64 "Enable building amd64 assembly implementation")
 
@@ -184,12 +194,17 @@ if(MINGW)
     set(ZLIB_DLL_SRCS ${CMAKE_CURRENT_BINARY_DIR}/zlib1rc.obj)
 endif(MINGW)
 
-add_library(zlib SHARED ${ZLIB_SRCS} ${ZLIB_ASMS} ${ZLIB_DLL_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
-add_library(zlibstatic STATIC ${ZLIB_SRCS} ${ZLIB_ASMS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
-set_target_properties(zlib PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
-set_target_properties(zlib PROPERTIES SOVERSION 1)
 
-if(NOT CYGWIN)
+add_library(zlibstatic STATIC ${ZLIB_SRCS} ${ZLIB_ASMS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
+
+if (BUILD_SHARED_LIBS)
+	add_library(zlib SHARED ${ZLIB_SRCS} ${ZLIB_ASMS} ${ZLIB_DLL_SRCS} ${ZLIB_PUBLIC_HDRS} ${ZLIB_PRIVATE_HDRS})
+	set_target_properties(zlib PROPERTIES DEFINE_SYMBOL ZLIB_DLL)
+	set_target_properties(zlib PROPERTIES SOVERSION 1)
+endif (BUILD_SHARED_LIBS)
+
+
+if((NOT CYGWIN) AND (NOT MSVC))
     # This property causes shared libraries on Linux to have the full version
     # encoded into their final filename.  We disable this on Cygwin because
     # it causes cygz-${ZLIB_FULL_VERSION}.dll to be created when cygz.dll
@@ -212,7 +227,9 @@ elseif(BUILD_SHARED_LIBS AND WIN32)
 endif()
 
 if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL )
-    install(TARGETS zlib zlibstatic
+
+	list(APPEND INSTALL_TARGETS ${INSTALL_SOURCE_TARGETS})
+    install(TARGETS ${INSTALL_TARGETS}
         RUNTIME DESTINATION "${INSTALL_BIN_DIR}"
         ARCHIVE DESTINATION "${INSTALL_LIB_DIR}"
         LIBRARY DESTINATION "${INSTALL_LIB_DIR}" )
